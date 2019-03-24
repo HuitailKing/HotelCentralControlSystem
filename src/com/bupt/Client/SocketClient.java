@@ -10,10 +10,12 @@ import java.net.UnknownHostException;
 public class SocketClient implements  Runnable {
     private String room_name;
     private int port=8888,portOffset=0;
+
     public SocketClient(String room_name){
         this.room_name = "ROOM---"+room_name+"---";
         this.portOffset = Integer.parseInt(room_name);
     }
+
     @Override
     public  void run() {
         try {
@@ -23,15 +25,20 @@ public class SocketClient implements  Runnable {
             PrintWriter out = new PrintWriter(socket.getOutputStream()); // 输出，to 服务器 socket
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream())); // 输入， from 服务器 socket
-            out.println(room_name+"Client request! :-) ");
-            out.println(room_name+"Client request! :-) -------");
-            out.flush(); // 刷缓冲输出，to 服务器
-            System.out.println(room_name+"print:"+in.readLine()); // 打印服务器发过来的字符串
+            int cnt=10;
+            while (cnt-->0){
+                out.println(room_name+"Client CCCCCCCC"+"************cnt"+cnt);
+                out.flush(); // 刷缓冲输出，to 服务器
+                Thread.sleep(1000);
+                System.out.println(room_name+in.readLine()); // 打印服务器发过来的字符串
+            }
             System.out.println(room_name+"Client end!");
             socket.close();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e){
             e.printStackTrace();
         }
 

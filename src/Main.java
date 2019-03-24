@@ -12,7 +12,10 @@ public class Main {
             SocketServer test_server=new SocketServer();
             Thread s=new Thread(test_server);
             s.start();
-            Thread.sleep(5000);
+            /**
+             * waiting for server thread initialization finished
+             */
+            Thread.sleep(2000);
             /**
              * client init
              */

@@ -31,14 +31,19 @@ public class SocketServiceThread implements Runnable{
             BufferedReader in = new BufferedReader(new InputStreamReader(
                     socket.getInputStream())); //输入，from 客户端
             PrintWriter out = new PrintWriter(socket.getOutputStream()); //输出，to 客户端
-            System.out.println(ServiceName+in.readLine());  // 打印 客户 socket 发过来的字符，按行(\n,\r,或\r\n)
-            System.out.println(ServiceName+in.readLine());
-            out.println(ServiceName+"Server reponse! ^_^ ");
-            out.flush(); // to 客户端，输出
+            int cnt=10;
+            while(cnt-->0){
+                System.out.println(ServiceName+in.readLine());
+                Thread.sleep(2000);
+                out.println(ServiceName+"^^^^^^^^^^^^^cnt"+cnt);
+                out.flush(); // to 客户端，输出
+            }
             socket.close();
             server.close();
             System.out.println(ServiceName+"Server end!");
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e){
             e.printStackTrace();
         }
     }
