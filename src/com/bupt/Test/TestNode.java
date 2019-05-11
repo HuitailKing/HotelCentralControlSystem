@@ -1,17 +1,30 @@
 package com.bupt.Test;
 
 import java.util.concurrent.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class TestNode implements Runnable {
     private int ServiceThreadNum = 4;
+    private int TestPort = 9999;
+    private ServerSocket server = null;
     private ExecutorService pool = Executors.newFixedThreadPool(ServiceThreadNum);
     public  TestNode(){};
 
     @Override
     public void run() {
-        for(int i=1;i<=ServiceThreadNum;i++){
-            Runnable serviceTask = new TestForClientThread(i+"");
-            pool.submit(serviceTask);
+
+
+        try{
+            server = new ServerSocket(TestPort);
+            System.out.println("Test Node Listening...");
+            while(true){
+                Socket ForClient = server.accept();
+                pool.submit(new TestThread(ForClient));
+            }
+        } catch (Exception e){
+            e.printStackTrace();
         }
+
     }
 }

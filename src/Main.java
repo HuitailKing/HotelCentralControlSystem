@@ -1,11 +1,20 @@
 import com.bupt.Server.*;
 import com.bupt.Client.*;
+import com.bupt.Test.*;
 public class Main {
 
     public static void main(String[] args) {
         try{
             String Room="Room";
 
+
+            /**
+             * test node init
+             */
+            TestNode testNode = new TestNode();
+            Thread t = new Thread(testNode);
+            t.start();
+            Thread.sleep(2000);
             /**
              * server init
              */
