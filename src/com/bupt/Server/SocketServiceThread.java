@@ -6,92 +6,133 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import com.google.gson.*;
 
-public class SocketServiceThread implements Runnable{
+import com.bupt.InfoBean;
+import java.util.*;
+import com.bupt.InfoBean;
+
+public class SocketServiceThread extends BaseThread implements Runnable{
 
     static int RoomCnt = 0;
-    static Object lock = new Object();
+    private Object Lock = null;
 
     private Socket RoomSocket = null;
     //private ServerSocket server;
     private int port=8888;
 
-    private boolean exit = false;
-    private boolean start = false;
-
-    private BufferedReader in = null; //输入，from 客户端
-    private PrintWriter out = null; //输出，to 客户端
-
-    //Room Info
     private String Room = "";
 
+    //Info
+    private BufferedReader ClientGetter = null; //输入，from 客户端
+    private PrintWriter ClientWriter = null; //输出，to 客户端
+    static private Gson gson = new Gson();
+    private InfoBean Info = new InfoBean();
+    
 
-    
-    
-    public SocketServiceThread(Socket RoomSocket){
+    public SocketServiceThread(Socket RoomSocket,Object lock){
+        Lock = lock;
         Room = "Unset"+RoomSocket.toString();
         this.init(RoomSocket);
     }
     private void init(Socket RoomSocket){
         try {
             this.RoomSocket = RoomSocket;
-            in = new BufferedReader(new InputStreamReader(
+            ClientGetter = new BufferedReader(new InputStreamReader(
                     RoomSocket.getInputStream())); //输入，from 客户端
-            out = new PrintWriter(RoomSocket.getOutputStream()); //输出，to 客户端
+            ClientWriter = new PrintWriter(RoomSocket.getOutputStream()); //输出，to 客户端
         } catch (IOException e){
             e.printStackTrace();
         }
     }
 
+    //Info process
+
+
+
     //Server端等待Client告知房间号
     private boolean CheckingReady(){
         try{
-            if(in.readLine().equals("r"))
+            Info.clear();
+            Info = gson.fromJson(ClientGetter.readLine(),InfoBean.class);
+            if(Info.ActionType.equals("r"))
             {
-                Room = in.readLine();
+                Room = Info.Room;
                 System.out.println("set Room:"+Room);
                 return true;
             }
         } catch (Exception e){
             e.printStackTrace();
         }
+        System.out.println("Checking faill"+gson.toJson(Info));
         return false;
     }
-    private void process(){
 
+
+    //接受Client的状态信心并唤醒ReplyThread
+    private void process(){
+        try {
+            Info = gson.fromJson(ClientGetter.readLine(), InfoBean.class);
+
+            //账单信息(添加即可)和状态信息（需要立即打印）
+            if(Info.ActionType.equals("b")||Info.ActionType.equals("state")){
+
+                //多线程处理父类的静态变量
+                LockTools.lock.lock();
+                try{
+
+                    //添加账单
+                    if(Info.ActionType.equals("b")) super.NewBill(Info);
+
+                    //需要打印
+                    //等待上个状态信息打印完毕
+                    while(super.StateStr!="")LockTools.StateEmptyCondition.await();
+                    super.Room = Integer.valueOf(Room);
+                    super.StateStr = Info.Value;
+                    super.ShouldReply = true;
+
+                    LockTools.StateFullCondition.signal();
+
+                }finally {
+                    LockTools.lock.unlock();
+                }
+            }else{
+                System.out.println("【ERROR】Server Get"+Info.ActionType);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
     @Override
     public void run(){
         try {
+
             System.out.println(Room+"Server Thread start!");
+            //等待Client全部ready
+            LockTools.lock.lock();
+            try{
 
+                if(CheckingReady()) RoomCnt +=1;
 
-            while(!start){
-                synchronized(lock){
+                System.out.println("Room:"+Room+" RoomCnt:"+RoomCnt);
 
-                    if(CheckingReady())
-                        RoomCnt +=1;
-
-                    System.out.println("Room:"+Room+" RoomCnt:"+RoomCnt);
-
-                    if(RoomCnt == 4)
-                        lock.notifyAll();
-
+                while(RoomCnt !=4){
                     System.out.println("Room:"+Room+" wait");
-                    lock.wait();
+                    LockTools.StartCondition.await();
                 }
-                break;
+            } finally {
+                super.Start = true;
+                LockTools.StartCondition.signalAll();
+                LockTools.lock.unlock();
             }
 
-            System.out.println("------------Room:"+Room+"is Ready! Test Begin.");
 
-            while(!exit){
+            System.out.println("------------Room:"+Room+"is Ready! Test Begin##########################################");
+
+            while(!super.Exit){
 
                 process();
 
-                out.println(Room+"^^^^^^^^^^^^^cnt");
-                out.flush(); // to 客户端，输出
-                Thread.sleep(1000);
             }
 
             RoomSocket.close();
