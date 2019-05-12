@@ -5,7 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TestNode implements Runnable {
-    private int ServiceThreadNum = 4;
+    private int ServiceThreadNum = 10;
     private int TestPort = 9999;
     private ServerSocket server = null;
     private ExecutorService pool = Executors.newFixedThreadPool(ServiceThreadNum);

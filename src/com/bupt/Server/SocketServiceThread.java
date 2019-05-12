@@ -73,12 +73,12 @@ public class SocketServiceThread extends BaseThread implements Runnable{
     private void process(){
         try {
             Info = gson.fromJson(ClientGetter.readLine(), InfoBean.class);
-
+            System.out.println("【Server】【Received】Room "+Room+gson.toJson(Info));
             //账单信息(添加即可)和状态信息（需要立即打印）
             if(Info.ActionType.equals("b")||Info.ActionType.equals("state")){
 
                 //多线程处理父类的静态变量
-                LockTools.lock.lock();
+                LockTools.ReplyLock.lock();
                 try{
 
                     //添加账单
@@ -86,18 +86,19 @@ public class SocketServiceThread extends BaseThread implements Runnable{
 
                     //需要打印
                     //等待上个状态信息打印完毕
-                    while(super.StateStr!="")LockTools.StateEmptyCondition.await();
+                    while(!super.StateStr.equals("")) {
+                        //System.out.println("【Server】Room"+Room+" await");
+                        LockTools.StateEmptyCondition.await();
+                    }
                     super.Room = Integer.valueOf(Room);
                     super.StateStr = Info.Value;
                     super.ShouldReply = true;
 
-                    LockTools.StateFullCondition.signal();
-
                 }finally {
-                    LockTools.lock.unlock();
+                    LockTools.ReplyLock.unlock();
                 }
             }else{
-                System.out.println("【ERROR】Server Get"+Info.ActionType);
+                System.out.println("【ERROR】Server Get:"+Info.ActionType);
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -107,9 +108,9 @@ public class SocketServiceThread extends BaseThread implements Runnable{
     public void run(){
         try {
 
-            System.out.println(Room+"Server Thread start!");
+            System.out.println(Room+"Server Thread is Waiting...");
             //等待Client全部ready
-            LockTools.lock.lock();
+            LockTools.StartLock.lock();
             try{
 
                 if(CheckingReady()) RoomCnt +=1;
@@ -120,14 +121,16 @@ public class SocketServiceThread extends BaseThread implements Runnable{
                     System.out.println("Room:"+Room+" wait");
                     LockTools.StartCondition.await();
                 }
+                System.out.println("Room:"+Room+" out of wait");
             } finally {
-                super.Start = true;
-                LockTools.StartCondition.signalAll();
-                LockTools.lock.unlock();
+                if(super.Start != true){
+                    super.Start = true;
+                    LockTools.StartCondition.signalAll();
+                }
+                LockTools.StartLock.unlock();
+                System.out.println("###########################Room:"+Room+"is Ready! Test Begin##########################################");
             }
 
-
-            System.out.println("------------Room:"+Room+"is Ready! Test Begin##########################################");
 
             while(!super.Exit){
 
