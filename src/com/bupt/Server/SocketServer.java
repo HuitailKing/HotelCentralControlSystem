@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.net.ServerSocket;
 
 public class SocketServer implements Runnable {
-    private int ServiceThreadNum = 10;
+    private int ServiceThreadNum = 30;
     private int ServerPort = 8888;
     private ServerSocket server = null;
     private ExecutorService pool = Executors.newFixedThreadPool(ServiceThreadNum);
@@ -20,6 +20,7 @@ public class SocketServer implements Runnable {
             Object lock = new Object();
 
             pool.submit(new ReplyThread(lock));
+            Thread.sleep(2000);
             //Client Thread
             while(true){
                 Socket socket = server.accept();

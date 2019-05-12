@@ -15,8 +15,8 @@ public class SocketClient implements  Runnable {
 
     //Port
     private int portOffset = 0;
-    private int port = 20050;
-    private int port_for_server = 30050;
+    private int port = 23990;
+    private int port_for_server = 33990;
     private int ServerPort= 8888;
     private int TestPort = 9999;
 
@@ -42,7 +42,7 @@ public class SocketClient implements  Runnable {
 
 
     public SocketClient(String Room){
-        this.Room = "Room---"+Room+"---";
+        this.Room = Room;
         this.portOffset = Integer.parseInt(Room);
     }
 
@@ -62,7 +62,7 @@ public class SocketClient implements  Runnable {
                 t+=1;
                 time+=2;
                 Info.Value = "r="+Room+" t="+t+" w="+w;
-                Info.ActionType = "State";
+                Info.ActionType = "state";
                 Thread.sleep(2000);
             } else if(w == 1){
                 t-=1;
@@ -85,9 +85,14 @@ public class SocketClient implements  Runnable {
                 Info.ActionType = "b";
                 Info.Bill = (time-2)+","+time+","+t+","+(t-1)+","+ 5;
                 Thread.sleep(2000);
+            } else{
+                System.out.println("【Client】【"+Room+ " Info】"+"it:"+it+"tt"+tt+"t"+t+ "w"+w);
+                Thread.sleep(1000);
             }
+            Info.Room = Room;
             ServerWriter.println(gson.toJson(Info));
             ServerWriter.flush();
+            System.out.println("【Client】【"+Room+ " Send to Server】"+gson.toJson(Info));
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -113,8 +118,17 @@ public class SocketClient implements  Runnable {
             System.out.println(Room+"Client start!");
             ServerWriter = new PrintWriter(socket.getOutputStream());
             ServerGetter = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            TestWriter = new PrintWriter(socket.getOutputStream());
-            TestGetter = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            TestWriter = new PrintWriter(testsoket.getOutputStream());
+            TestGetter = new BufferedReader(new InputStreamReader(testsoket.getInputStream()));
+
+
+            //给Test节点发送房间号
+            Info.clear();
+            Info.ActionType = "r";
+            Info.Room = Room;
+            TestWriter.println(gson.toJson(Info));
+            TestWriter.flush();
+            System.out.println(Room+"send Room to Test");
 
             //告知Server，本Room Ready
             Info.clear();
@@ -122,26 +136,30 @@ public class SocketClient implements  Runnable {
             Info.Room = Room;
             ServerWriter.println(gson.toJson(Info));
             ServerWriter.flush();
-            System.out.println(Room+"Client ready");
+            System.out.println(Room+"Send Room to Server");
 
             //得到Test节点的初始化
             Info = gson.fromJson(TestGetter.readLine(),InfoBean.class);
             assert Info.ActionType.equals("it");
             t = it = Integer.valueOf(Info.it);
-            System.out.println("【Client】"+Room+"is initilized");
+            System.out.println("【Client】"+Room+" is initilized");
 
             //被设置风速，目标温度
             Info = gson.fromJson(TestGetter.readLine(),InfoBean.class);
             assert Info.ActionType.equals("tt");
             tt = Integer.valueOf(Info.tt);
             w = Integer.valueOf(Info.w);
-            System.out.println("【Client】"+Room+"is setted");
+            System.out.println("【Client】"+Room+": target temperature & wind has been set.");
 
             while(true){
-                if(TestGetter.read()==0)
+                if(!TestGetter.ready()) {
+                    //System.out.println("【Client】"+Room+" Process");
                     Process(w);
+                }
                 else{
-                    Info = gson.fromJson(TestGetter.readLine(),InfoBean.class);
+                    //res=TestGetter.read();
+                    String str = TestGetter.readLine();
+                    Info = gson.fromJson(str,InfoBean.class);
                     assert Info.ActionType.equals("w");
                     w = Integer.valueOf(Info.w);
                 }
